@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Classes;
+using Newtonsoft.Json;
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -46,11 +48,15 @@ namespace Client
 
         private void Send_Click(object sender, RoutedEventArgs e)
         {
-            // Encode the data string into a byte array.  
-            byte[] msg = Encoding.ASCII.GetBytes(message.Text.ToString());
+            Classes.Transmission t = new Classes.Transmission(nickname.Text, message.Text, DateTime.Now);
+            SendTransmission(t);
+        }
 
-            // Send the data through the socket.  
-            int bytesSent = ClientSocket.Send(msg);
+        private void SendTransmission(Classes.Transmission t)
+        {
+            string serialized = JsonConvert.SerializeObject(t);
+            byte[] buffer = Encoding.ASCII.GetBytes(serialized);
+            ClientSocket.Send(buffer, 0, buffer.Length, SocketFlags.None);
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -70,10 +76,11 @@ namespace Client
             var data = new byte[received];
             Array.Copy(buffer, data, received);
             string text = Encoding.ASCII.GetString(data);
+            Classes.Transmission deserialized = JsonConvert.DeserializeObject<Classes.Transmission>(text);
             // Call the main thread to update UI
             this.Dispatcher.Invoke(() =>
             {
-                chat.AppendText(text + "\n");
+                chat.AppendText(deserialized.nickname + ": " + deserialized.message + "\n");
                 chat.ScrollToEnd();
             });
             // Rearm

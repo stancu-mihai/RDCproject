@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Classes;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -64,7 +66,9 @@ namespace Server
                                 }
 
                                 // Show the data on the console.  
-                                Console.WriteLine("Text received on thread {0}: {1}", Thread.CurrentThread.ManagedThreadId, data);
+                                Classes.Transmission t = JsonConvert.DeserializeObject<Classes.Transmission>(data);
+                                Console.WriteLine("Received message from {0} on thread {1} with the message {2} at {3}",
+                                    t.nickname, Thread.CurrentThread.ManagedThreadId, t.message, t.time);
 
                                 foreach (Socket sck in broadcastList)
                                 {
