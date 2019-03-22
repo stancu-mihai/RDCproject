@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -8,6 +9,7 @@ namespace Server
 {
     public class SynchronousSocketListener
     {
+        private static readonly List<Socket> broadcastList = new List<Socket>();
 
         public static void StartListening()
         {
@@ -22,8 +24,7 @@ namespace Server
             IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11000);
 
             // Create a TCP/IP socket.  
-            Socket listener = new Socket(ipAddress.AddressFamily,
-                SocketType.Stream, ProtocolType.Tcp);
+            Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
             // Bind the socket to the local endpoint and   
             // listen for incoming connections.  
@@ -38,6 +39,8 @@ namespace Server
                     Console.WriteLine("Waiting for a new connection on thread " + Thread.CurrentThread.ManagedThreadId);
                     // Program is suspended while waiting for an incoming connection.  
                     Socket handler = listener.Accept();
+                    // When the connection is accepted, add it to broadcast list
+                    broadcastList.Add(handler);
                     new Thread(() =>
                     {
                         try
@@ -48,22 +51,27 @@ namespace Server
                                 int bytesRec = handler.Receive(bytes);
                                 string data = Encoding.ASCII.GetString(bytes, 0, bytesRec);
 
-                                // Show the data on the console.  
-                                Console.WriteLine("Text received on thread {0}: {1}", Thread.CurrentThread.ManagedThreadId, data);
-
                                 // Echo the data back to the client.  
                                 byte[] msg = Encoding.ASCII.GetBytes(data);
-
-                                handler.Send(msg);
-
+                              
                                 if (data.IndexOf("<EXIT>") > -1)
                                 {
+                                    Console.WriteLine("Client on thread {0} disconnected", Thread.CurrentThread.ManagedThreadId);
+                                    broadcastList.Remove(handler);
+                                    handler.Shutdown(SocketShutdown.Both);
+                                    handler.Close();
                                     break;
                                 }
 
+                                // Show the data on the console.  
+                                Console.WriteLine("Text received on thread {0}: {1}", Thread.CurrentThread.ManagedThreadId, data);
+
+                                foreach (Socket sck in broadcastList)
+                                {
+                                    sck.Send(msg);
+                                }
+
                             } while (true);
-                            handler.Shutdown(SocketShutdown.Both);
-                            handler.Close();
                         }
                         catch (Exception ex)
                         {
