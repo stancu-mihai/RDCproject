@@ -60,36 +60,35 @@ namespace Server
 
         }
 
-        public static void ThreadTasks(Socket handler, byte[]  bytes)
+        public static void ThreadTasks(Socket socket, byte[] bytes)
         {
             try
             {
                 Console.WriteLine("New connection accepted on thread " + Thread.CurrentThread.ManagedThreadId);
                 do
                 {
-                    int bytesRec = handler.Receive(bytes);
-                    string data = Encoding.ASCII.GetString(bytes, 0, bytesRec);
+                    int bytesRec = socket.Receive(bytes);
+                    string serializedData = Encoding.ASCII.GetString(bytes, 0, bytesRec);
 
-                    // Echo the data back to the client.  
-                    byte[] msg = Encoding.ASCII.GetBytes(data);
-
-                    if (data.IndexOf("<EXIT>") > -1)
+                    if (serializedData.IndexOf("<EXIT>") > -1)
                     {
                         Console.WriteLine("Client on thread {0} disconnected", Thread.CurrentThread.ManagedThreadId);
-                        broadcastList.Remove(handler);
-                        handler.Shutdown(SocketShutdown.Both);
-                        handler.Close();
+                        broadcastList.Remove(socket);
+                        socket.Shutdown(SocketShutdown.Both);
+                        socket.Close();
                         break;
                     }
 
                     // Show the data on the console.  
-                    Classes.Transmission t = JsonConvert.DeserializeObject<Classes.Transmission>(data);
+                    Transmission t = JsonConvert.DeserializeObject<Transmission>(serializedData);
                     Console.WriteLine("Received message from {0} on thread {1} with the message {2} at {3}",
                         t.nickname, Thread.CurrentThread.ManagedThreadId, t.message, t.time);
 
-                    foreach (Socket sck in broadcastList)
+                    // Broadcast the message to all clients
+                    byte[] msg = Encoding.ASCII.GetBytes(serializedData);
+                    foreach (Socket socketToBroadcast in broadcastList)
                     {
-                        sck.Send(msg);
+                        socketToBroadcast.Send(msg);
                     }
 
                 } while (true);
