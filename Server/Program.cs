@@ -1,6 +1,7 @@
 ﻿using Classes;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -13,7 +14,7 @@ namespace Server
     public class SynchronousSocketListener
     {
         private static readonly List<Socket> broadcastList = new List<Socket>();
-        private static readonly Queue<Transmission> logQueue = new Queue<Transmission>();
+        private static readonly ConcurrentQueue<Transmission> logQueue = new ConcurrentQueue<Transmission>();
 
         public static void StartListening()
         {
@@ -84,10 +85,14 @@ namespace Server
                         {
                             // Simulate some long request
                             Thread.Sleep(3000);
-                            Transmission t = logQueue.Dequeue();
-                            // Write to log
-                            logStream.WriteLine("Received message from '{0}' on thread '{1}' with the message '{2}' at {3}",
-                            t.nickname, Thread.CurrentThread.ManagedThreadId, t.message, t.time);
+                            bool ok;
+                            do
+                            {
+                                ok = logQueue.TryDequeue(out Transmission t);
+                                // Write to log
+                                logStream.WriteLine("Received message from '{0}' on thread '{1}' with the message '{2}' at {3}",
+                                t.nickname, Thread.CurrentThread.ManagedThreadId, t.message, t.time);
+                            } while (!ok);
                         }
                         else
                         {
