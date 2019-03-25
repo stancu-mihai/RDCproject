@@ -38,7 +38,7 @@ namespace Client
             {
                 ClientSocket.Connect(remoteEP);
 
-                Console.WriteLine("Socket connected to {0}", ClientSocket.RemoteEndPoint.ToString());
+                txtStatus.Content = "Socket connected to {0}" + ClientSocket.RemoteEndPoint.ToString();
             }
             catch (Exception e)
             {
@@ -48,11 +48,11 @@ namespace Client
 
         private void Send_Click(object sender, RoutedEventArgs e)
         {
-            Classes.Transmission t = new Classes.Transmission(nickname.Text, message.Text, DateTime.Now);
+            Transmission t = new Transmission(nickname.Text, message.Text, DateTime.Now);
             SendTransmission(t);
         }
 
-        private void SendTransmission(Classes.Transmission t)
+        private void SendTransmission(Transmission t)
         {
             string serialized = JsonConvert.SerializeObject(t);
             byte[] buffer = Encoding.ASCII.GetBytes(serialized);
